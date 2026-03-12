@@ -7,71 +7,25 @@ st.set_page_config(page_title="AI Loan Analyzer", layout="wide")
 
 model = joblib.load("loan_model.pkl")
 
-# -----------------------------
-# GLOBAL UI STYLING
-# -----------------------------
-
-st.markdown("""
-<style>
-
-.stApp {
-    background-color: #f4f6fb;
-}
-
-.block-container {
-    padding-top: 2rem;
-}
-
-.card {
-    background: white;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0px 6px 15px rgba(0,0,0,0.08);
-    margin-bottom: 20px;
-}
-
-.metric-card {
-    background: #ffffff;
-    padding: 20px;
-    border-radius: 10px;
-    text-align:center;
-    box-shadow:0px 4px 12px rgba(0,0,0,0.07);
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-# -----------------------------
+# -----------------------
 # HERO SECTION
-# -----------------------------
+# -----------------------
 
-st.markdown("""
-<div class="card">
+st.title("AI Loan Eligibility Analyzer")
+st.caption("Evaluate loan eligibility and financial risk using machine learning.")
 
-<h1>AI Loan Eligibility Analyzer</h1>
-
-<p>
-Evaluate loan eligibility, affordability and financial risk using machine learning.
-</p>
-
-</div>
-""", unsafe_allow_html=True)
-
-st.warning(
+st.info(
 """
-⚠ This application is an educational machine learning demonstration tool  
-and should not be used as financial advice.
+This application is a machine learning demonstration tool and **not financial advice**.
 """
 )
 
-# -----------------------------
+# -----------------------
 # SIDEBAR
-# -----------------------------
-
-st.sidebar.title("Navigation")
+# -----------------------
 
 menu = st.sidebar.radio(
-"",
+"Navigation",
 [
 "Loan Analyzer",
 "EMI Calculator",
@@ -79,9 +33,9 @@ menu = st.sidebar.radio(
 ]
 )
 
-# -----------------------------
+# -----------------------
 # LOAN ANALYZER
-# -----------------------------
+# -----------------------
 
 if menu == "Loan Analyzer":
 
@@ -95,7 +49,7 @@ if menu == "Loan Analyzer":
 # STEP 1
     if step == 1:
 
-        st.markdown("### Step 1 • Personal Information")
+        st.subheader("Step 1 • Personal Information")
 
         gender = st.selectbox("Gender",["Male","Female"])
         married = st.selectbox("Marital Status",["Yes","No"])
@@ -111,7 +65,7 @@ if menu == "Loan Analyzer":
 # STEP 2
     elif step == 2:
 
-        st.markdown("### Step 2 • Employment Details")
+        st.subheader("Step 2 • Employment Details")
 
         education = st.selectbox("Education",["Graduate","Not Graduate"])
         self_emp = st.selectbox("Self Employed",["Yes","No"])
@@ -133,7 +87,7 @@ if menu == "Loan Analyzer":
 # STEP 3
     elif step == 3:
 
-        st.markdown("### Step 3 • Income Details")
+        st.subheader("Step 3 • Income Details")
 
         income = st.number_input("Applicant Income",0,100000000,5000)
         co_income = st.number_input("Coapplicant Income",0,100000000,0)
@@ -155,7 +109,7 @@ if menu == "Loan Analyzer":
 # STEP 4
     elif step == 4:
 
-        st.markdown("### Step 4 • Loan Details")
+        st.subheader("Step 4 • Loan Details")
 
         loan_amount = st.number_input("Loan Amount",0,10000000,200)
         loan_term = st.number_input("Loan Term (months)",0,600,360)
@@ -188,22 +142,19 @@ if menu == "Loan Analyzer":
                 ]])
 
                 prediction = model.predict(data)
-
-                probability = np.random.randint(40,90)
+                probability = model.predict_proba(data)[0][1] * 100
+                probability = round(probability,2)
 
                 if probability > 70:
                     risk_label = "Low"
-                    risk_color = "green"
                 elif probability > 40:
                     risk_label = "Medium"
-                    risk_color = "orange"
                 else:
                     risk_label = "High"
-                    risk_color = "red"
 
 # SCORE CARDS
 
-                st.markdown("### Financial Score Card")
+                st.subheader("Financial Score Card")
 
                 col1,col2,col3 = st.columns(3)
 
@@ -219,7 +170,7 @@ if menu == "Loan Analyzer":
                     title={'text': "Approval Meter"},
                     gauge={
                         'axis':{'range':[0,100]},
-                        'bar':{'color':risk_color},
+                        'bar':{'color':"green"},
                         'steps':[
                             {'range':[0,40],'color':"#ff4d4d"},
                             {'range':[40,70],'color':"#ffa500"},
@@ -232,7 +183,7 @@ if menu == "Loan Analyzer":
 
 # RISK ANALYSIS
 
-                st.markdown("### Risk Analysis")
+                st.subheader("Risk Analysis")
 
                 risks=[]
 
@@ -251,13 +202,13 @@ if menu == "Loan Analyzer":
                     for r in risks:
                         st.warning(r)
 
-# -----------------------------
+# -----------------------
 # EMI CALCULATOR
-# -----------------------------
+# -----------------------
 
 elif menu == "EMI Calculator":
 
-    st.markdown("### EMI Calculator")
+    st.subheader("Loan EMI Calculator")
 
     loan = st.number_input("Loan Amount",0,100000000,100000)
     rate = st.number_input("Interest Rate (%)",0.0,50.0,8.0)
@@ -270,38 +221,27 @@ elif menu == "EMI Calculator":
 
     st.metric("Monthly EMI",f"₹{int(emi)}")
 
-# -----------------------------
+# -----------------------
 # ABOUT
-# -----------------------------
+# -----------------------
 
 elif menu == "About":
 
-    st.markdown("### About This Tool")
+    st.subheader("About This Tool")
 
     st.write("""
-AI Loan Eligibility Analyzer is a machine learning demonstration project.
+AI Loan Eligibility Analyzer demonstrates how machine learning models
+can estimate loan approval probability based on financial inputs.
 
-Features include:
-
-• Loan eligibility prediction  
-• Financial risk analysis  
-• EMI calculator  
-
-This tool is built using Python, Streamlit and Scikit-Learn.
+This project is built using Python, Streamlit and Scikit-Learn.
 """)
 
-# -----------------------------
+# -----------------------
 # FOOTER
-# -----------------------------
+# -----------------------
 
 st.markdown("---")
 
-st.markdown(
-"""
-<center>
-AI Loan Analyzer • Machine Learning Demonstration Tool  
-Built with Python & Streamlit
-</center>
-""",
-unsafe_allow_html=True
+st.caption(
+"AI Loan Analyzer • Machine Learning Demonstration Tool"
 )
