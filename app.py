@@ -7,35 +7,39 @@ st.set_page_config(page_title="AI Loan Analyzer", layout="wide")
 
 model = joblib.load("loan_model.pkl")
 
-# -----------------------
-# HERO SECTION
-# -----------------------
+# -------------------------
+# HEADER
+# -------------------------
 
 st.title("AI Loan Eligibility Analyzer")
 st.caption("Evaluate loan eligibility and financial risk using machine learning.")
 
 st.info(
-"""
-This application is a machine learning demonstration tool and **not financial advice**.
-"""
+"This application is a machine learning demonstration tool and not financial advice."
 )
 
-# -----------------------
-# SIDEBAR
-# -----------------------
+# -------------------------
+# SIDEBAR CARD NAVIGATION
+# -------------------------
 
-menu = st.sidebar.radio(
-"Navigation",
-[
-"Loan Analyzer",
-"EMI Calculator",
-"About"
-]
-)
+st.sidebar.title("Finance Tools")
 
-# -----------------------
+if "menu" not in st.session_state:
+    st.session_state.menu = "Loan Analyzer"
+
+def nav_button(label):
+    if st.sidebar.button(label, use_container_width=True):
+        st.session_state.menu = label
+
+nav_button("Loan Analyzer")
+nav_button("EMI Calculator")
+nav_button("About")
+
+menu = st.session_state.menu
+
+# -------------------------
 # LOAN ANALYZER
-# -----------------------
+# -------------------------
 
 if menu == "Loan Analyzer":
 
@@ -142,7 +146,7 @@ if menu == "Loan Analyzer":
                 ]])
 
                 prediction = model.predict(data)
-                probability = model.predict_proba(data)[0][1] * 100
+                probability = model.predict_proba(data)[0][1]*100
                 probability = round(probability,2)
 
                 if probability > 70:
@@ -202,9 +206,9 @@ if menu == "Loan Analyzer":
                     for r in risks:
                         st.warning(r)
 
-# -----------------------
+# -------------------------
 # EMI CALCULATOR
-# -----------------------
+# -------------------------
 
 elif menu == "EMI Calculator":
 
@@ -221,27 +225,26 @@ elif menu == "EMI Calculator":
 
     st.metric("Monthly EMI",f"₹{int(emi)}")
 
-# -----------------------
+# -------------------------
 # ABOUT
-# -----------------------
+# -------------------------
 
 elif menu == "About":
 
     st.subheader("About This Tool")
 
-    st.write("""
-AI Loan Eligibility Analyzer demonstrates how machine learning models
-can estimate loan approval probability based on financial inputs.
+    st.write(
+"""
+AI Loan Eligibility Analyzer demonstrates how machine learning
+can estimate loan approval probability using financial inputs.
 
-This project is built using Python, Streamlit and Scikit-Learn.
-""")
+Built with Python, Streamlit and Scikit-Learn.
+"""
+)
 
-# -----------------------
+# -------------------------
 # FOOTER
-# -----------------------
+# -------------------------
 
 st.markdown("---")
-
-st.caption(
-"AI Loan Analyzer • Machine Learning Demonstration Tool"
-)
+st.caption("AI Loan Analyzer • Machine Learning Demonstration Tool")
