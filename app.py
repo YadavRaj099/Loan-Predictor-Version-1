@@ -11,7 +11,7 @@ model = joblib.load("loan_model.pkl")
 # HEADER
 # -------------------------
 
-st.title("AI Loan Eligibility Analyzer")
+st.title("Loan Approval Calculator")
 st.caption("Evaluate loan eligibility and financial risk using machine learning.")
 
 st.info(
