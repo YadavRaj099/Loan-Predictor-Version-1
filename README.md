@@ -65,26 +65,6 @@ README.md → Project documentation
 
 ---
 
-## Installation (Run Locally)
-
-1. Clone the repository
-
-git clone https://github.com/YOUR-USERNAME/AI-Loan-Analyzer.git
-
-2. Navigate to the project directory
-
-cd AI-Loan-Analyzer
-
-3. Install dependencies
-
-pip install -r requirements.txt
-
-4. Run the Streamlit app
-
-streamlit run app.py
-
----
-
 ## Disclaimer
 
 This application is a machine learning demonstration project and should not be used as financial advice or an actual loan approval system.
