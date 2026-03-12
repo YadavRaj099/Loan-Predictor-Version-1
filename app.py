@@ -2,73 +2,82 @@ import streamlit as st
 import numpy as np
 import joblib
 import plotly.graph_objects as go
-import pandas as pd
 
-st.set_page_config(page_title="AI Loan Eligibility Analyzer", layout="wide")
+st.set_page_config(page_title="AI Loan Analyzer", layout="wide")
 
 model = joblib.load("loan_model.pkl")
 
 # -----------------------------
-# SIDEBAR STYLE
+# GLOBAL UI STYLING
 # -----------------------------
 
 st.markdown("""
 <style>
 
-section[data-testid="stSidebar"] {
-    background: #0f172a;
+.stApp {
+    background-color: #f4f6fb;
 }
 
-section[data-testid="stSidebar"] button {
-    background: #1e293b;
-    color: white;
-    border-radius: 8px;
-    padding: 12px;
-    font-weight: 600;
-    border: none;
+.block-container {
+    padding-top: 2rem;
 }
 
-section[data-testid="stSidebar"] button:hover {
-    background: #334155;
+.card {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0px 6px 15px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+}
+
+.metric-card {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 10px;
+    text-align:center;
+    box-shadow:0px 4px 12px rgba(0,0,0,0.07);
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 # -----------------------------
-# SIDEBAR NAVIGATION
+# HERO SECTION
 # -----------------------------
 
-st.sidebar.title("Finance Tools")
+st.markdown("""
+<div class="card">
 
-if "menu" not in st.session_state:
-    st.session_state.menu = "Loan Analyzer"
+<h1>AI Loan Eligibility Analyzer</h1>
 
-def nav(label):
-    if st.sidebar.button(label, use_container_width=True):
-        st.session_state.menu = label
+<p>
+Evaluate loan eligibility, affordability and financial risk using machine learning.
+</p>
 
-nav("Loan Analyzer")
-nav("EMI Calculator")
-nav("Loan Comparison")
-nav("Credit Simulator")
-nav("Financial Advice")
-nav("About")
+</div>
+""", unsafe_allow_html=True)
 
-menu = st.session_state.menu
+st.warning(
+"""
+⚠ This application is an educational machine learning demonstration tool  
+and should not be used as financial advice.
+"""
+)
 
 # -----------------------------
-# HEADER
+# SIDEBAR
 # -----------------------------
 
-st.title("AI Loan Eligibility Analyzer")
-st.write("Analyze loan eligibility, risk and affordability using machine learning.")
+st.sidebar.title("Navigation")
 
-st.warning("""
-⚠ Disclaimer  
-This tool is an educational ML project and not a financial advisory service.  
-Predictions should not be used as the sole basis for financial decisions.
-""")
+menu = st.sidebar.radio(
+"",
+[
+"Loan Analyzer",
+"EMI Calculator",
+"About"
+]
+)
 
 # -----------------------------
 # LOAN ANALYZER
@@ -80,15 +89,16 @@ if menu == "Loan Analyzer":
         st.session_state.step = 1
 
     step = st.session_state.step
+
     st.progress(step/4)
 
-    # STEP 1
+# STEP 1
     if step == 1:
 
-        st.subheader("Step 1: Personal Info")
+        st.markdown("### Step 1 • Personal Information")
 
         gender = st.selectbox("Gender",["Male","Female"])
-        married = st.selectbox("Married",["Yes","No"])
+        married = st.selectbox("Marital Status",["Yes","No"])
         dependents = st.number_input("Dependents",0,10,0)
 
         if st.button("Next"):
@@ -98,10 +108,10 @@ if menu == "Loan Analyzer":
             st.session_state.step = 2
             st.rerun()
 
-    # STEP 2
+# STEP 2
     elif step == 2:
 
-        st.subheader("Step 2: Employment")
+        st.markdown("### Step 2 • Employment Details")
 
         education = st.selectbox("Education",["Graduate","Not Graduate"])
         self_emp = st.selectbox("Self Employed",["Yes","No"])
@@ -120,10 +130,10 @@ if menu == "Loan Analyzer":
                 st.session_state.step = 3
                 st.rerun()
 
-    # STEP 3
+# STEP 3
     elif step == 3:
 
-        st.subheader("Step 3: Income")
+        st.markdown("### Step 3 • Income Details")
 
         income = st.number_input("Applicant Income",0,100000000,5000)
         co_income = st.number_input("Coapplicant Income",0,100000000,0)
@@ -142,15 +152,14 @@ if menu == "Loan Analyzer":
                 st.session_state.step = 4
                 st.rerun()
 
-    # STEP 4
+# STEP 4
     elif step == 4:
 
-        st.subheader("Step 4: Loan Details")
+        st.markdown("### Step 4 • Loan Details")
 
         loan_amount = st.number_input("Loan Amount",0,10000000,200)
         loan_term = st.number_input("Loan Term (months)",0,600,360)
         credit = st.selectbox("Credit History",["Good","Bad"])
-        area = st.selectbox("Property Area",["Urban","Semiurban","Rural"])
 
         col1,col2 = st.columns(2)
 
@@ -160,7 +169,7 @@ if menu == "Loan Analyzer":
                 st.rerun()
 
         with col2:
-            if st.button("Predict Loan Approval"):
+            if st.button("Analyze Loan"):
 
                 data = np.array([[
                     1 if st.session_state.gender=="Male" else 0,
@@ -173,7 +182,7 @@ if menu == "Loan Analyzer":
                     loan_amount,
                     loan_term,
                     1 if credit=="Good" else 0,
-                    ["Rural","Semiurban","Urban"].index(area),
+                    1,
                     0,
                     0
                 ]])
@@ -182,81 +191,65 @@ if menu == "Loan Analyzer":
 
                 probability = np.random.randint(40,90)
 
-                st.subheader("Approval Score Card")
+                if probability > 70:
+                    risk_label = "Low"
+                    risk_color = "green"
+                elif probability > 40:
+                    risk_label = "Medium"
+                    risk_color = "orange"
+                else:
+                    risk_label = "High"
+                    risk_color = "red"
 
-                col1,col2 = st.columns(2)
+# SCORE CARDS
 
-                with col1:
+                st.markdown("### Financial Score Card")
 
-                    if prediction[0]==1:
-                        st.success("Loan Likely Approved")
-                    else:
-                        st.error("Loan Risky")
+                col1,col2,col3 = st.columns(3)
 
-                    st.metric("Approval Probability",f"{probability}%")
+                col1.metric("Approval Probability", f"{probability}%")
+                col2.metric("Estimated EMI", f"₹{loan_amount/loan_term:.0f}")
+                col3.metric("Risk Level", risk_label)
 
-                with col2:
+# APPROVAL GAUGE
 
-                    fig = go.Figure(go.Indicator(
-                        mode="gauge+number",
-                        value=probability,
-                        title={'text': "Approval Meter"},
-                        gauge={
-                            'axis':{'range':[0,100]},
-                            'bar':{'color':"green"},
-                            'steps':[
-                                {'range':[0,40],'color':"red"},
-                                {'range':[40,70],'color':"orange"},
-                                {'range':[70,100],'color':"green"}
-                            ]
-                        }
-                    ))
+                fig = go.Figure(go.Indicator(
+                    mode="gauge+number",
+                    value=probability,
+                    title={'text': "Approval Meter"},
+                    gauge={
+                        'axis':{'range':[0,100]},
+                        'bar':{'color':risk_color},
+                        'steps':[
+                            {'range':[0,40],'color':"#ff4d4d"},
+                            {'range':[40,70],'color':"#ffa500"},
+                            {'range':[70,100],'color':"#4caf50"}
+                        ]
+                    }
+                ))
 
-                    st.plotly_chart(fig,use_container_width=True)
+                st.plotly_chart(fig,use_container_width=True)
 
-                # ---------------------
-                # RISK EXPLANATION
-                # ---------------------
+# RISK ANALYSIS
 
-                st.subheader("Risk Analysis")
+                st.markdown("### Risk Analysis")
 
-                risks = []
+                risks=[]
 
                 if st.session_state.dependents > 3:
-                    risks.append("High number of dependents increases financial burden.")
+                    risks.append("High number of dependents increases financial pressure.")
 
                 if credit == "Bad":
                     risks.append("Poor credit history reduces approval chances.")
 
-                if st.session_state.income < loan_amount*10:
-                    risks.append("Loan amount is high compared to income.")
+                if st.session_state.income < loan_amount*5:
+                    risks.append("Loan amount is large relative to income.")
 
                 if len(risks)==0:
-                    st.success("Applicant profile looks financially stable.")
-
+                    st.success("Financial profile appears stable.")
                 else:
                     for r in risks:
                         st.warning(r)
-
-                # ---------------------
-                # CREDIT IMPROVEMENT PLAN
-                # ---------------------
-
-                st.subheader("Improvement Suggestions")
-
-                suggestions = []
-
-                if credit=="Bad":
-                    suggestions.append("Improve credit score by clearing outstanding debts.")
-
-                if st.session_state.income < loan_amount*10:
-                    suggestions.append("Reduce loan amount or increase income documentation.")
-
-                suggestions.append("Maintain credit score above 700 for better approval chances.")
-                suggestions.append("Avoid multiple loan applications simultaneously.")
-
-                for s in suggestions:
-                    st.write("•",s)
 
 # -----------------------------
 # EMI CALCULATOR
@@ -264,7 +257,7 @@ if menu == "Loan Analyzer":
 
 elif menu == "EMI Calculator":
 
-    st.subheader("Loan EMI Calculator")
+    st.markdown("### EMI Calculator")
 
     loan = st.number_input("Loan Amount",0,100000000,100000)
     rate = st.number_input("Interest Rate (%)",0.0,50.0,8.0)
@@ -275,74 +268,7 @@ elif menu == "EMI Calculator":
 
     emi = (loan*r*(1+r)**n)/((1+r)**n-1)
 
-    st.success(f"Monthly EMI: ₹{int(emi)}")
-
-# -----------------------------
-# LOAN COMPARISON
-# -----------------------------
-
-elif menu == "Loan Comparison":
-
-    st.subheader("Compare Loan Options")
-
-    loan = st.number_input("Loan Amount",0,100000000,500000)
-    years = st.number_input("Loan Tenure",1,30,10)
-
-    banks = {
-        "Bank A":8.0,
-        "Bank B":9.0,
-        "Bank C":7.5
-    }
-
-    results = []
-
-    for bank,rate in banks.items():
-
-        r = rate/(12*100)
-        n = years*12
-
-        emi = (loan*r*(1+r)**n)/((1+r)**n-1)
-
-        results.append([bank,rate,int(emi)])
-
-    df = pd.DataFrame(results,columns=["Bank","Interest Rate","Monthly EMI"])
-
-    st.dataframe(df)
-
-# -----------------------------
-# CREDIT SIMULATOR
-# -----------------------------
-
-elif menu == "Credit Simulator":
-
-    st.subheader("Credit Score Simulator")
-
-    income = st.number_input("Income",0,10000000,50000)
-    debt = st.number_input("Existing Debt",0,10000000,10000)
-
-    score = 750 - (debt/income*100)
-
-    st.metric("Estimated Credit Score",int(score))
-
-# -----------------------------
-# FINANCIAL ADVICE
-# -----------------------------
-
-elif menu == "Financial Advice":
-
-    st.subheader("Basic Financial Health Check")
-
-    income = st.number_input("Monthly Income",0,10000000,5000)
-    expense = st.number_input("Monthly Expenses",0,10000000,2000)
-
-    savings = income-expense
-
-    st.metric("Monthly Savings",savings)
-
-    if savings < income*0.2:
-        st.warning("Try saving at least 20% of your income.")
-    else:
-        st.success("Healthy saving habit.")
+    st.metric("Monthly EMI",f"₹{int(emi)}")
 
 # -----------------------------
 # ABOUT
@@ -350,18 +276,32 @@ elif menu == "Financial Advice":
 
 elif menu == "About":
 
-    st.subheader("About This Project")
+    st.markdown("### About This Tool")
 
     st.write("""
-This application demonstrates how machine learning can assist with financial analysis.
+AI Loan Eligibility Analyzer is a machine learning demonstration project.
 
-Features:
+Features include:
 
-• AI Loan Eligibility Analyzer  
-• Loan EMI Calculator  
-• Loan Comparison Tool  
-• Credit Score Simulator  
-• Financial Health Advice  
+• Loan eligibility prediction  
+• Financial risk analysis  
+• EMI calculator  
 
-This project is for **educational purposes only** and does not provide lending services.
+This tool is built using Python, Streamlit and Scikit-Learn.
 """)
+
+# -----------------------------
+# FOOTER
+# -----------------------------
+
+st.markdown("---")
+
+st.markdown(
+"""
+<center>
+AI Loan Analyzer • Machine Learning Demonstration Tool  
+Built with Python & Streamlit
+</center>
+""",
+unsafe_allow_html=True
+)
