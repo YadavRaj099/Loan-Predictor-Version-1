@@ -1,250 +1,196 @@
 import streamlit as st
 import numpy as np
 import joblib
+import math
 import plotly.graph_objects as go
 
-st.set_page_config(page_title="AI Loan Analyzer", layout="wide")
+st.set_page_config(page_title="AI Loan Eligibility Analyzer", layout="wide")
 
 model = joblib.load("loan_model.pkl")
 
-# -------------------------
-# HEADER
-# -------------------------
+st.title("AI Loan Eligibility Analyzer")
+st.write("Evaluate loan eligibility, affordability and financial risk using machine learning.")
 
-st.title("Loan Approval Calculator")
-st.caption("Evaluate loan eligibility and financial risk using machine learning.")
+st.warning("This application is a machine learning demonstration tool and not financial advice.")
 
-st.info(
-"This application is a machine learning demonstration tool and not financial advice."
-)
+# -----------------------------
+# Wizard Step State
+# -----------------------------
 
-# -------------------------
-# SIDEBAR CARD NAVIGATION
-# -------------------------
+if "step" not in st.session_state:
+    st.session_state.step = 1
 
-st.sidebar.title("Finance Tools")
+step = st.session_state.step
 
-if "menu" not in st.session_state:
-    st.session_state.menu = "Loan Analyzer"
+# -----------------------------
+# Step 1
+# -----------------------------
 
-def nav_button(label):
-    if st.sidebar.button(label, use_container_width=True):
-        st.session_state.menu = label
+if step == 1:
 
-nav_button("Loan Analyzer")
-nav_button("EMI Calculator")
-nav_button("About")
+    st.header("Step 1 • Personal Information")
 
-menu = st.session_state.menu
+    gender = st.selectbox("Gender", ["Male", "Female"])
+    married = st.selectbox("Married", ["Yes", "No"])
+    dependents = st.number_input("Dependents", min_value=0, step=1)
 
-# -------------------------
-# LOAN ANALYZER
-# -------------------------
+    if st.button("Next"):
+        st.session_state.gender = gender
+        st.session_state.married = married
+        st.session_state.dependents = dependents
+        st.session_state.step = 2
+        st.rerun()
 
-if menu == "Loan Analyzer":
+# -----------------------------
+# Step 2
+# -----------------------------
 
-    if "step" not in st.session_state:
-        st.session_state.step = 1
+elif step == 2:
 
-    step = st.session_state.step
+    st.header("Step 2 • Education & Work")
 
-    st.progress(step/4)
+    education = st.selectbox("Education", ["Graduate", "Not Graduate"])
+    self_employed = st.selectbox("Self Employed", ["Yes", "No"])
 
-# STEP 1
-    if step == 1:
+    col1,col2 = st.columns(2)
 
-        st.subheader("Step 1 • Personal Information")
+    with col1:
+        if st.button("Previous"):
+            st.session_state.step = 1
+            st.rerun()
 
-        gender = st.selectbox("Gender",["Male","Female"])
-        married = st.selectbox("Marital Status",["Yes","No"])
-        dependents = st.number_input("Dependents",0,10,0)
-
+    with col2:
         if st.button("Next"):
-            st.session_state.gender = gender
-            st.session_state.married = married
-            st.session_state.dependents = dependents
+            st.session_state.education = education
+            st.session_state.self_employed = self_employed
+            st.session_state.step = 3
+            st.rerun()
+
+# -----------------------------
+# Step 3
+# -----------------------------
+
+elif step == 3:
+
+    st.header("Step 3 • Income")
+
+    applicant_income = st.number_input("Applicant Monthly Income", min_value=0)
+    coapplicant_income = st.number_input("Co-Applicant Monthly Income", min_value=0)
+
+    col1,col2 = st.columns(2)
+
+    with col1:
+        if st.button("Previous"):
             st.session_state.step = 2
             st.rerun()
 
-# STEP 2
-    elif step == 2:
+    with col2:
+        if st.button("Next"):
+            st.session_state.applicant_income = applicant_income
+            st.session_state.coapplicant_income = coapplicant_income
+            st.session_state.step = 4
+            st.rerun()
 
-        st.subheader("Step 2 • Employment Details")
+# -----------------------------
+# Step 4
+# -----------------------------
 
-        education = st.selectbox("Education",["Graduate","Not Graduate"])
-        self_emp = st.selectbox("Self Employed",["Yes","No"])
+elif step == 4:
 
-        col1,col2 = st.columns(2)
+    st.header("Step 4 • Loan Details")
+
+    loan_amount = st.number_input("Loan Amount", min_value=0)
+    loan_term = st.number_input("Loan Term (months)", min_value=1)
+    credit_history = st.selectbox("Credit History", ["Good", "Bad"])
+
+    col1,col2 = st.columns(2)
+
+    with col1:
+        if st.button("Previous"):
+            st.session_state.step = 3
+            st.rerun()
+
+    with col2:
+        analyze = st.button("Analyze Loan")
+
+    if analyze:
+
+        gender = 1 if st.session_state.gender == "Male" else 0
+        married = 1 if st.session_state.married == "Yes" else 0
+        education = 1 if st.session_state.education == "Graduate" else 0
+        self_employed = 1 if st.session_state.self_employed == "Yes" else 0
+        credit = 1 if credit_history == "Good" else 0
+
+        total_income = st.session_state.applicant_income + st.session_state.coapplicant_income
+
+        features = np.array([[gender,
+                              married,
+                              st.session_state.dependents,
+                              education,
+                              self_employed,
+                              st.session_state.applicant_income,
+                              st.session_state.coapplicant_income,
+                              loan_amount,
+                              loan_term,
+                              credit]])
+
+        prediction = model.predict(features)[0]
+        probability = model.predict_proba(features)[0][1] * 100
+
+        # -----------------------------
+        # EMI Calculation
+        # -----------------------------
+
+        annual_rate = 0.10
+        monthly_rate = annual_rate / 12
+
+        emi = loan_amount * monthly_rate * ((1 + monthly_rate)**loan_term) / ((1 + monthly_rate)**loan_term - 1)
+
+        # -----------------------------
+        # Risk Logic
+        # -----------------------------
+
+        if probability > 70:
+            risk = "Low"
+            message = "Strong financial profile."
+        elif probability > 40:
+            risk = "Medium"
+            message = "Moderate approval chance."
+        else:
+            risk = "High"
+            message = "Loan approval unlikely without improving financial profile."
+
+        # -----------------------------
+        # Layout
+        # -----------------------------
+
+        col1,col2 = st.columns([1,1])
 
         with col1:
-            if st.button("Previous"):
-                st.session_state.step = 1
-                st.rerun()
+
+            st.subheader("Financial Score Card")
+
+            st.metric("Approval Probability", f"{probability:.1f}%")
+            st.metric("Estimated EMI", f"₹{emi:,.0f}")
+            st.metric("Risk Level", risk)
+
+            st.subheader("Risk Analysis")
+            st.info(message)
 
         with col2:
-            if st.button("Next"):
-                st.session_state.education = education
-                st.session_state.self_emp = self_emp
-                st.session_state.step = 3
-                st.rerun()
 
-# STEP 3
-    elif step == 3:
+            fig = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=probability,
+                gauge={
+                    "axis": {"range": [0,100]},
+                    "bar": {"color": "white"},
+                    "steps":[
+                        {"range":[0,40],"color":"red"},
+                        {"range":[40,70],"color":"orange"},
+                        {"range":[70,100],"color":"green"}
+                    ]
+                }
+            ))
 
-        st.subheader("Step 3 • Income Details")
-
-        income = st.number_input("Applicant Income",0,100000000,5000)
-        co_income = st.number_input("Coapplicant Income",0,100000000,0)
-
-        col1,col2 = st.columns(2)
-
-        with col1:
-            if st.button("Previous"):
-                st.session_state.step = 2
-                st.rerun()
-
-        with col2:
-            if st.button("Next"):
-                st.session_state.income = income
-                st.session_state.co_income = co_income
-                st.session_state.step = 4
-                st.rerun()
-
-# STEP 4
-    elif step == 4:
-
-        st.subheader("Step 4 • Loan Details")
-
-        loan_amount = st.number_input("Loan Amount",0,10000000,200)
-        loan_term = st.number_input("Loan Term (months)",0,600,360)
-        credit = st.selectbox("Credit History",["Good","Bad"])
-
-        col1,col2 = st.columns(2)
-
-        with col1:
-            if st.button("Previous"):
-                st.session_state.step = 3
-                st.rerun()
-
-        with col2:
-            if st.button("Analyze Loan"):
-
-                data = np.array([[
-                    1 if st.session_state.gender=="Male" else 0,
-                    1 if st.session_state.married=="Yes" else 0,
-                    st.session_state.dependents,
-                    1 if st.session_state.education=="Graduate" else 0,
-                    1 if st.session_state.self_emp=="Yes" else 0,
-                    st.session_state.income,
-                    st.session_state.co_income,
-                    loan_amount,
-                    loan_term,
-                    1 if credit=="Good" else 0,
-                    1,
-                    0,
-                    0
-                ]])
-
-                prediction = model.predict(data)
-                probability = model.predict_proba(data)[0][1]*100
-                probability = round(probability,2)
-
-                if probability > 70:
-                    risk_label = "Low"
-                elif probability > 40:
-                    risk_label = "Medium"
-                else:
-                    risk_label = "High"
-
-# SCORE CARDS
-
-                st.subheader("Financial Score Card")
-
-                col1,col2,col3 = st.columns(3)
-
-                col1.metric("Approval Probability", f"{probability}%")
-                col2.metric("Estimated EMI", f"₹{loan_amount/loan_term:.0f}")
-                col3.metric("Risk Level", risk_label)
-
-# APPROVAL GAUGE
-
-                fig = go.Figure(go.Indicator(
-                    mode="gauge+number",
-                    value=probability,
-                    title={'text': "Approval Meter"},
-                    gauge={
-                        'axis':{'range':[0,100]},
-                        'bar':{'color':"green"},
-                        'steps':[
-                            {'range':[0,40],'color':"#ff4d4d"},
-                            {'range':[40,70],'color':"#ffa500"},
-                            {'range':[70,100],'color':"#4caf50"}
-                        ]
-                    }
-                ))
-
-                st.plotly_chart(fig,use_container_width=True)
-
-# RISK ANALYSIS
-
-                st.subheader("Risk Analysis")
-
-                risks=[]
-
-                if st.session_state.dependents > 3:
-                    risks.append("High number of dependents increases financial pressure.")
-
-                if credit == "Bad":
-                    risks.append("Poor credit history reduces approval chances.")
-
-                if st.session_state.income < loan_amount*5:
-                    risks.append("Loan amount is large relative to income.")
-
-                if len(risks)==0:
-                    st.success("Financial profile appears stable.")
-                else:
-                    for r in risks:
-                        st.warning(r)
-
-# -------------------------
-# EMI CALCULATOR
-# -------------------------
-
-elif menu == "EMI Calculator":
-
-    st.subheader("Loan EMI Calculator")
-
-    loan = st.number_input("Loan Amount",0,100000000,100000)
-    rate = st.number_input("Interest Rate (%)",0.0,50.0,8.0)
-    years = st.number_input("Loan Tenure (years)",1,40,10)
-
-    r = rate/(12*100)
-    n = years*12
-
-    emi = (loan*r*(1+r)**n)/((1+r)**n-1)
-
-    st.metric("Monthly EMI",f"₹{int(emi)}")
-
-# -------------------------
-# ABOUT
-# -------------------------
-
-elif menu == "About":
-
-    st.subheader("About This Tool")
-
-    st.write(
-"""
-AI Loan Eligibility Analyzer demonstrates how machine learning
-can estimate loan approval probability using financial inputs.
-
-Built with Python, Streamlit and Scikit-Learn.
-"""
-)
-
-# -------------------------
-# FOOTER
-# -------------------------
-
-st.markdown("---")
-st.caption("AI Loan Analyzer • Machine Learning Demonstration Tool")
+            st.plotly_chart(fig, use_container_width=True)
