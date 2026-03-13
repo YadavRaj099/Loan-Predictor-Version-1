@@ -155,6 +155,13 @@ if menu == "Loan Analyzer":
                     risk_label = "Medium"
                 else:
                     risk_label = "High"
+# EMI CALCULATION
+
+rate = 0.08
+monthly_rate = rate / 12
+n = loan_term
+
+emi = (loan_amount * monthly_rate * (1 + monthly_rate) ** n) / ((1 + monthly_rate) ** n - 1)
 
 # SCORE CARDS
 
@@ -184,6 +191,28 @@ if menu == "Loan Analyzer":
                 ))
 
                 st.plotly_chart(fig,use_container_width=True)
+
+# EMI BURDEN METER
+
+income_total = st.session_state.income + st.session_state.co_income
+
+emi_ratio = (emi / income_total) * 100 if income_total > 0 else 0
+
+fig2 = go.Figure(go.Indicator(
+    mode="gauge+number",
+    value=emi_ratio,
+    title={'text': "Income vs EMI Burden (%)"},
+    gauge={
+        'axis':{'range':[0,100]},
+        'steps':[
+            {'range':[0,25],'color':"#4caf50"},
+            {'range':[25,40],'color':"#ffa500"},
+            {'range':[40,100],'color':"#ff4d4d"}
+        ]
+    }
+))
+
+st.plotly_chart(fig2,use_container_width=True)
 
 # RISK ANALYSIS
 
