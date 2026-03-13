@@ -5,6 +5,16 @@ import plotly.graph_objects as go
 
 st.set_page_config(page_title="AI Loan Analyzer", layout="wide")
 
+# UI polish
+st.markdown("""
+<style>
+.block-container {padding-top:2rem;}
+[data-testid="stMetricValue"] {font-size:28px;font-weight:700;}
+[data-testid="stMetricLabel"] {color:#9aa0a6;}
+.stSidebar button {border-radius:10px;margin-bottom:8px;font-weight:600;}
+</style>
+""", unsafe_allow_html=True)
+
 model = joblib.load("loan_model.pkl")
 
 # -------------------------
@@ -49,6 +59,7 @@ if menu == "Loan Analyzer":
     step = st.session_state.step
 
     st.progress(step/4)
+    st.caption(f"Step {step} of 4")
 
 # STEP 1
     if step == 1:
@@ -116,7 +127,7 @@ if menu == "Loan Analyzer":
         st.subheader("Step 4 • Loan Details")
 
         loan_amount = st.number_input("Loan Amount",0,10000000,200)
-        loan_term = st.number_input("Loan Term (months)",0,600,360)
+        loan_term = st.number_input("Loan Term (months)",1,600,360)
         credit = st.selectbox("Credit History",["Good","Bad"])
 
         col1,col2 = st.columns(2)
@@ -127,113 +138,113 @@ if menu == "Loan Analyzer":
                 st.rerun()
 
         with col2:
-            if st.button("Analyze Loan"):
+            analyze = st.button("Analyze Loan")
 
-                data = np.array([[
-                    1 if st.session_state.gender=="Male" else 0,
-                    1 if st.session_state.married=="Yes" else 0,
-                    st.session_state.dependents,
-                    1 if st.session_state.education=="Graduate" else 0,
-                    1 if st.session_state.self_emp=="Yes" else 0,
-                    st.session_state.income,
-                    st.session_state.co_income,
-                    loan_amount,
-                    loan_term,
-                    1 if credit=="Good" else 0,
-                    1,
-                    0,
-                    0
-                ]])
+        if analyze:
 
-                prediction = model.predict(data)
-                probability = model.predict_proba(data)[0][1]*100
-                probability = round(probability,2)
+            data = np.array([[
+                1 if st.session_state.gender=="Male" else 0,
+                1 if st.session_state.married=="Yes" else 0,
+                st.session_state.dependents,
+                1 if st.session_state.education=="Graduate" else 0,
+                1 if st.session_state.self_emp=="Yes" else 0,
+                st.session_state.income,
+                st.session_state.co_income,
+                loan_amount,
+                loan_term,
+                1 if credit=="Good" else 0,
+                1,0,0
+            ]])
 
-                if probability > 70:
-                    risk_label = "Low"
-                elif probability > 40:
-                    risk_label = "Medium"
-                else:
-                    risk_label = "High"
+            prediction = model.predict(data)
+            probability = model.predict_proba(data)[0][1]*100
+            probability = round(probability,2)
+
+            if probability > 70:
+                risk_label = "Low"
+            elif probability > 40:
+                risk_label = "Medium"
+            else:
+                risk_label = "High"
+
 # EMI CALCULATION
 
-rate = 0.08
-monthly_rate = rate / 12
-n = loan_term
+            rate = 0.08
+            monthly_rate = rate/12
+            n = loan_term
 
-emi = (loan_amount * monthly_rate * (1 + monthly_rate) ** n) / ((1 + monthly_rate) ** n - 1)
+            emi = (loan_amount*monthly_rate*(1+monthly_rate)**n)/((1+monthly_rate)**n-1)
 
 # SCORE CARDS
 
-                st.subheader("Financial Score Card")
+            st.subheader("Financial Score Card")
 
-                col1,col2,col3 = st.columns(3)
+            col1,col2,col3 = st.columns(3)
 
-                col1.metric("Approval Probability", f"{probability}%")
-                col2.metric("Estimated EMI", f"₹{loan_amount/loan_term:.0f}")
-                col3.metric("Risk Level", risk_label)
+            col1.metric("Approval Probability", f"{probability}%")
+            col2.metric("Estimated EMI", f"₹{emi:,.0f}")
+            col3.metric("Risk Level", risk_label)
 
 # APPROVAL GAUGE
 
-                fig = go.Figure(go.Indicator(
-                    mode="gauge+number",
-                    value=probability,
-                    title={'text': "Approval Meter"},
-                    gauge={
-                        'axis':{'range':[0,100]},
-                        'bar':{'color':"green"},
-                        'steps':[
-                            {'range':[0,40],'color':"#ff4d4d"},
-                            {'range':[40,70],'color':"#ffa500"},
-                            {'range':[70,100],'color':"#4caf50"}
-                        ]
-                    }
-                ))
+            fig = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=probability,
+                title={'text':"Approval Meter"},
+                gauge={
+                    'axis':{'range':[0,100]},
+                    'bar':{'color':"green"},
+                    'steps':[
+                        {'range':[0,40],'color':"#ff4d4d"},
+                        {'range':[40,70],'color':"#ffa500"},
+                        {'range':[70,100],'color':"#4caf50"}
+                    ]
+                }
+            ))
 
-                st.plotly_chart(fig,use_container_width=True)
+            st.plotly_chart(fig,use_container_width=True)
 
 # EMI BURDEN METER
 
-income_total = st.session_state.income + st.session_state.co_income
+            income_total = st.session_state.income + st.session_state.co_income
+            emi_ratio = (emi/income_total)*100 if income_total>0 else 0
 
-emi_ratio = (emi / income_total) * 100 if income_total > 0 else 0
+            fig2 = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=emi_ratio,
+                title={'text':"Income vs EMI Burden (%)"},
+                gauge={
+                    'axis':{'range':[0,100]},
+                    'steps':[
+                        {'range':[0,25],'color':"#4caf50"},
+                        {'range':[25,40],'color':"#ffa500"},
+                        {'range':[40,100],'color':"#ff4d4d"}
+                    ]
+                }
+            ))
 
-fig2 = go.Figure(go.Indicator(
-    mode="gauge+number",
-    value=emi_ratio,
-    title={'text': "Income vs EMI Burden (%)"},
-    gauge={
-        'axis':{'range':[0,100]},
-        'steps':[
-            {'range':[0,25],'color':"#4caf50"},
-            {'range':[25,40],'color':"#ffa500"},
-            {'range':[40,100],'color':"#ff4d4d"}
-        ]
-    }
-))
-
-st.plotly_chart(fig2,use_container_width=True)
+            st.plotly_chart(fig2,use_container_width=True)
 
 # RISK ANALYSIS
 
-                st.subheader("Risk Analysis")
+            st.subheader("Risk Analysis")
 
-                risks=[]
+            risks=[]
 
-                if st.session_state.dependents > 3:
-                    risks.append("High number of dependents increases financial pressure.")
+            if st.session_state.dependents > 3:
+                risks.append("High number of dependents increases financial pressure.")
 
-                if credit == "Bad":
-                    risks.append("Poor credit history reduces approval chances.")
+            if credit == "Bad":
+                risks.append("Poor credit history reduces approval chances.")
 
-                if st.session_state.income < loan_amount*5:
-                    risks.append("Loan amount is large relative to income.")
+            if st.session_state.income < loan_amount*5:
+                risks.append("Loan amount is large relative to income.")
 
-                if len(risks)==0:
-                    st.success("Financial profile appears stable.")
-                else:
-                    for r in risks:
-                        st.warning(r)
+            if len(risks)==0:
+                st.success("Financial profile appears stable.")
+            else:
+                for r in risks:
+                    st.warning(r)
 
 # -------------------------
 # EMI CALCULATOR
