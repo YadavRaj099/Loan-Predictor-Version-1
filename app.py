@@ -5,21 +5,60 @@ import plotly.graph_objects as go
 
 st.set_page_config(page_title="AI Loan Analyzer", layout="wide")
 
+# -------------------------
+# UI POLISH
+# -------------------------
+
 st.markdown("""
 <style>
-.block-container {padding-top:2rem;}
-[data-testid="stMetricValue"] {font-size:28px;font-weight:700;}
-[data-testid="stMetricLabel"] {color:#9aa0a6;}
-.stSidebar button {border-radius:10px;margin-bottom:8px;font-weight:600;}
+
+.block-container{
+padding-top:2rem;
+max-width:1200px;
+}
+
+.stSidebar{
+background-color:#1f2333;
+}
+
+.stSidebar button{
+background-color:#2b2f45;
+color:white;
+border-radius:12px;
+height:45px;
+font-weight:600;
+margin-bottom:10px;
+border:1px solid #3c405c;
+}
+
+.stSidebar button:hover{
+background-color:#40456a;
+}
+
+[data-testid="stMetricValue"]{
+font-size:28px;
+font-weight:700;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
 model = joblib.load("loan_model.pkl")
 
+# -------------------------
+# HEADER
+# -------------------------
+
 st.title("AI Loan Eligibility Analyzer")
 st.caption("Evaluate loan eligibility and financial risk using machine learning.")
 
-st.info("This application is a machine learning demonstration tool and not financial advice.")
+st.info(
+"This application is a machine learning demonstration tool and not financial advice."
+)
+
+# -------------------------
+# SIDEBAR NAVIGATION
+# -------------------------
 
 st.sidebar.title("Finance Tools")
 
@@ -36,6 +75,10 @@ nav_button("About")
 
 menu = st.session_state.menu
 
+# -------------------------
+# LOAN ANALYZER
+# -------------------------
+
 if menu == "Loan Analyzer":
 
     if "step" not in st.session_state:
@@ -43,8 +86,8 @@ if menu == "Loan Analyzer":
 
     step = st.session_state.step
     st.progress(step/4)
-    st.caption(f"Step {step} of 4")
 
+# STEP 1
     if step == 1:
 
         st.subheader("Step 1 • Personal Information")
@@ -60,6 +103,7 @@ if menu == "Loan Analyzer":
             st.session_state.step = 2
             st.rerun()
 
+# STEP 2
     elif step == 2:
 
         st.subheader("Step 2 • Employment Details")
@@ -81,6 +125,7 @@ if menu == "Loan Analyzer":
                 st.session_state.step = 3
                 st.rerun()
 
+# STEP 3
     elif step == 3:
 
         st.subheader("Step 3 • Income Details")
@@ -102,6 +147,7 @@ if menu == "Loan Analyzer":
                 st.session_state.step = 4
                 st.rerun()
 
+# STEP 4
     elif step == 4:
 
         st.subheader("Step 4 • Loan Details")
@@ -136,9 +182,25 @@ if menu == "Loan Analyzer":
                 1,0,0
             ]])
 
-            prediction = model.predict(data)
             probability = model.predict_proba(data)[0][1]*100
             probability = round(probability,2)
+
+# -------------------------
+# EMI CALCULATION FIX
+# -------------------------
+
+            interest_rate = 8
+            monthly_rate = interest_rate/(12*100)
+            n = loan_term
+
+            emi = (loan_amount*monthly_rate*(1+monthly_rate)**n)/((1+monthly_rate)**n-1)
+
+            total_payment = emi*n
+            total_interest = total_payment-loan_amount
+
+# -------------------------
+# RISK SCORE
+# -------------------------
 
             if probability > 70:
                 risk_label = "Low"
@@ -147,78 +209,88 @@ if menu == "Loan Analyzer":
             else:
                 risk_label = "High"
 
-            rate = 0.08
-            monthly_rate = rate/12
-            n = loan_term
-
-            emi = (loan_amount*monthly_rate*(1+monthly_rate)**n)/((1+monthly_rate)**n-1)
-
-            total_payment = emi * loan_term
-            total_interest = total_payment - loan_amount
-
             income_total = st.session_state.income + st.session_state.co_income
+
             emi_ratio = (emi/income_total)*100 if income_total>0 else 0
 
-            if emi_ratio < 20:
-                affordability = 90
-            elif emi_ratio < 35:
-                affordability = 70
-            elif emi_ratio < 50:
-                affordability = 50
-            else:
-                affordability = 30
-
-            financial_score = round((probability*0.6)+(affordability*0.4))
+# -------------------------
+# SCORE CARDS
+# -------------------------
 
             st.subheader("Financial Score Card")
 
-            c1,c2,c3,c4 = st.columns(4)
+            col1,col2,col3 = st.columns(3)
 
-            c1.metric("Approval Probability",f"{probability}%")
-            c2.metric("Estimated EMI",f"₹{emi:,.0f}")
-            c3.metric("Risk Level",risk_label)
-            c4.metric("Financial Health Score",f"{financial_score}/100")
+            col1.metric("Approval Probability", f"{probability}%")
+            col2.metric("Estimated EMI", f"₹{int(emi)}")
+            col3.metric("Risk Level", risk_label)
+
+# -------------------------
+# APPROVAL GAUGE
+# -------------------------
 
             fig = go.Figure(go.Indicator(
                 mode="gauge+number",
                 value=probability,
-                title={'text':"Approval Meter"},
-                gauge={'axis':{'range':[0,100]},
-                'steps':[{'range':[0,40],'color':"#ff4d4d"},
-                         {'range':[40,70],'color':"#ffa500"},
-                         {'range':[70,100],'color':"#4caf50"}]}
+                title={'text': "Approval Meter"},
+                gauge={
+                    'axis':{'range':[0,100]},
+                    'bar':{'color':"white"},
+                    'steps':[
+                        {'range':[0,40],'color':"#ff4d4d"},
+                        {'range':[40,70],'color':"#ffa500"},
+                        {'range':[70,100],'color':"#4caf50"}
+                    ],
+                    'threshold':{
+                        'line':{'color':"white",'width':4},
+                        'thickness':0.75,
+                        'value':probability
+                    }
+                }
             ))
 
             st.plotly_chart(fig,use_container_width=True)
 
+# -------------------------
+# EMI BURDEN GAUGE
+# -------------------------
+
             fig2 = go.Figure(go.Indicator(
                 mode="gauge+number",
                 value=emi_ratio,
-                title={'text':"Income vs EMI Burden (%)"},
-                gauge={'axis':{'range':[0,100]},
-                'steps':[{'range':[0,25],'color':"#4caf50"},
-                         {'range':[25,40],'color':"#ffa500"},
-                         {'range':[40,100],'color':"#ff4d4d"}]}
+                title={'text': "Income vs EMI Burden (%)"},
+                gauge={
+                    'axis':{'range':[0,100]},
+                    'bar':{'color':"white"},
+                    'steps':[
+                        {'range':[0,25],'color':"#4caf50"},
+                        {'range':[25,40],'color':"#ffa500"},
+                        {'range':[40,100],'color':"#ff4d4d"}
+                    ],
+                    'threshold':{
+                        'line':{'color':"white",'width':4},
+                        'thickness':0.75,
+                        'value':emi_ratio
+                    }
+                }
             ))
 
             st.plotly_chart(fig2,use_container_width=True)
 
+# -------------------------
+# LOAN COST ANALYSIS
+# -------------------------
+
             st.subheader("Loan Cost Analysis")
 
-            a1,a2 = st.columns(2)
-            a1.metric("Total Repayment",f"₹{total_payment:,.0f}")
-            a2.metric("Total Interest Paid",f"₹{total_interest:,.0f}")
+            c1,c2 = st.columns(2)
 
-            st.subheader("Optimization Suggestions")
+            c1.metric("Total Repayment",f"₹{int(total_payment)}")
+            c2.metric("Total Interest Paid",f"₹{int(total_interest)}")
 
-            if emi_ratio > 40:
-                st.warning("Your EMI is too high relative to income. Consider reducing loan amount.")
-
-            if credit == "Bad":
-                st.warning("Improving your credit history could significantly increase approval chances.")
-
-            if loan_term < 120:
-                st.info("Increasing loan tenure may reduce EMI burden.")
+# -------------------------
+# RISK ANALYSIS
+# -------------------------
 
             st.subheader("Risk Analysis")
 
@@ -239,6 +311,10 @@ if menu == "Loan Analyzer":
                 for r in risks:
                     st.warning(r)
 
+# -------------------------
+# EMI CALCULATOR
+# -------------------------
+
 elif menu == "EMI Calculator":
 
     st.subheader("Loan EMI Calculator")
@@ -254,6 +330,10 @@ elif menu == "EMI Calculator":
 
     st.metric("Monthly EMI",f"₹{int(emi)}")
 
+# -------------------------
+# ABOUT
+# -------------------------
+
 elif menu == "About":
 
     st.subheader("About This Tool")
@@ -264,6 +344,10 @@ can estimate loan approval probability using financial inputs.
 
 Built with Python, Streamlit and Scikit-Learn.
 """)
+
+# -------------------------
+# FOOTER
+# -------------------------
 
 st.markdown("---")
 st.caption("AI Loan Analyzer • Machine Learning Demonstration Tool")
