@@ -43,6 +43,10 @@ font-weight:700;
 </style>
 """, unsafe_allow_html=True)
 
+# -------------------------
+# LOAD MODEL
+# -------------------------
+
 model = joblib.load("loan_model.pkl")
 
 # -------------------------
@@ -182,11 +186,13 @@ if menu == "Loan Analyzer":
                 1,0,0
             ]])
 
-            probability = model.predict_proba(data)[0][1]*100
+            # FIXED PROBABILITY EXTRACTION
+            prob = model.predict_proba(data)[0]
+            probability = max(prob)*100
             probability = round(probability,2)
 
 # -------------------------
-# EMI CALCULATION FIX
+# EMI CALCULATION
 # -------------------------
 
             interest_rate = 8
@@ -199,7 +205,7 @@ if menu == "Loan Analyzer":
             total_interest = total_payment-loan_amount
 
 # -------------------------
-# RISK SCORE
+# RISK LEVEL
 # -------------------------
 
             if probability > 70:
@@ -235,7 +241,7 @@ if menu == "Loan Analyzer":
                 title={'text': "Approval Meter"},
                 gauge={
                     'axis':{'range':[0,100]},
-                    'bar':{'color':"white"},
+                    'bar':{'color':"#00d4ff"},
                     'steps':[
                         {'range':[0,40],'color':"#ff4d4d"},
                         {'range':[40,70],'color':"#ffa500"},
@@ -261,7 +267,7 @@ if menu == "Loan Analyzer":
                 title={'text': "Income vs EMI Burden (%)"},
                 gauge={
                     'axis':{'range':[0,100]},
-                    'bar':{'color':"white"},
+                    'bar':{'color':"#00d4ff"},
                     'steps':[
                         {'range':[0,25],'color':"#4caf50"},
                         {'range':[25,40],'color':"#ffa500"},
