@@ -80,6 +80,4 @@ This application is a machine learning demonstration project and should not be u
 
 ---
 
-## Author
-
-Machine Learning Deployment Project
+Thank you for taking your time and reading till here 
